@@ -107,8 +107,8 @@ body <- dashboardBody(
             fluidRow(
               infoBox("Valor transferido", paste("R$", valores$`Total de dinheiro repassado aos beneficiários`, sep = " "), icon = icon("donate"), width = 3, color = "olive"),
               infoBox("Número de Potenciais Beneficiários", valores$`Número de potenciais beneficiários`, icon = icon("user-friends"), width = 3, color = "yellow"),
-              infoBox(HTML(paste("Percentual de famílias extremamente",br(), "pobres atendidas")), paste(valores$`Percentual de pessoas extremamente pobres atendidas`, "%", sep = ""), icon = icon("chart-line"), width = 3, color = "purple"),
-              infoBox(HTML(paste("Percentual de famílias",br(), "pobres atendidas")), paste(valores$`Percentual de pessoas pobres atendidas`, "%", sep = ""), icon = icon("chart-line"), width = 3, color = "navy")
+              infoBox(HTML(paste("Percentual de pessoas extremamente",br(), "pobres atendidas")), paste(valores$`Percentual de pessoas extremamente pobres atendidas`, "%", sep = ""), icon = icon("chart-line"), width = 3, color = "purple"),
+              infoBox(HTML(paste("Percentual de pessoas",br(), "pobres atendidas")), paste(valores$`Percentual de pessoas pobres atendidas`, "%", sep = ""), icon = icon("chart-line"), width = 3, color = "navy")
             ),
 #            fluidRow(
 #              column(selectInput("publico", "Público de Análise:",
