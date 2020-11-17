@@ -13,7 +13,7 @@ library(rgdal)
 library(rjson)
 
 #sudo systemctl start shiny-server
-#setwd("/srv/shiny-server/bolsa-merenda")
+setwd("/srv/shiny-server/bolsa-merenda")
 ##### Read db
 
 # Pagamentos - Municipal
@@ -42,14 +42,20 @@ g <- list(
 
 # Valores
 valores <- pagamentos_alunos_mun %>%
-  summarise(`Total de dinheiro repassado aos beneficiários` = sum(`Total de dinheiro repassado aos beneficiários`),
-            `Número de potenciais beneficiários` = sum(`Número de alunos extremamente pobres potenciais beneficiários`) + sum(`Número de alunos pobres potenciais beneficiários`),
+  summarise(`Valor repassado aos beneficiários` = sum(`Valor repassado aos beneficiários`),
+            `Número de famílias potenciais beneficiárias` = sum(`Número de famílias extremamente pobres potenciais beneficiárias`) + sum(`Número de famílias pobres potenciais beneficiárias`),
+            `Número de estudantes potenciais beneficiários` = sum(`Número de alunos extremamente pobres potenciais beneficiários`) + sum(`Número de alunos pobres potenciais beneficiários`),
             `Percentual de pessoas extremamente pobres atendidas` = sum(`Número de alunos extremamente pobres que receberam o benefício`) / sum(`Número de alunos extremamente pobres potenciais beneficiários`) * 100,
-            `Percentual de pessoas pobres atendidas` = sum(`Número de alunos pobres que receberam o benefício`) / sum(`Número de alunos pobres potenciais beneficiários`) * 100) %>%
-  mutate(`Total de dinheiro repassado aos beneficiários` = format(`Total de dinheiro repassado aos beneficiários`, big.mark = ".", decimal.mark = ","),
-         `Número de potenciais beneficiários` = format(`Número de potenciais beneficiários`, big.mark = ".", decimal.mark = ","),
+            `Percentual de pessoas pobres atendidas` = sum(`Número de alunos pobres que receberam o benefício`) / sum(`Número de alunos pobres potenciais beneficiários`) * 100,
+            `Percentual de famílias extremamente pobres atendidas` = sum(`Número de famílias extremamente pobres que receberam o benefício`) / sum(`Número de famílias extremamente pobres potenciais beneficiárias`) * 100,
+            `Percentual de famílias pobres atendidas` = sum(`Número de famílias pobres que receberam o benefício`) / sum(`Número de famílias pobres potenciais beneficiárias`) * 100) %>%
+  mutate(`Valor repassado aos beneficiários` = format(`Valor repassado aos beneficiários`, big.mark = ".", decimal.mark = ","),
+         `Número de famílias potenciais beneficiárias` = format(`Número de famílias potenciais beneficiárias`, big.mark = ".", decimal.mark = ","),
+         `Número de estudantes potenciais beneficiários` = format(`Número de estudantes potenciais beneficiários`, big.mark = ".", decimal.mark = ","),
          `Percentual de pessoas extremamente pobres atendidas` = format(`Percentual de pessoas extremamente pobres atendidas`, big.mark = ".", decimal.mark = ",", digits = 3),
-         `Percentual de pessoas pobres atendidas` = format(`Percentual de pessoas pobres atendidas`, big.mark = ".", decimal.mark = ",", digits = 3)
+         `Percentual de pessoas pobres atendidas` = format(`Percentual de pessoas pobres atendidas`, big.mark = ".", decimal.mark = ",", digits = 3),
+         `Percentual de famílias extremamente pobres atendidas` = format(`Percentual de famílias extremamente pobres atendidas`, big.mark = ".", decimal.mark = ",", digits = 3),
+         `Percentual de famílias pobres atendidas` = format(`Percentual de famílias pobres atendidas`, big.mark = ".", decimal.mark = ",", digits = 3)
          )
 
 ###################################
@@ -105,16 +111,16 @@ body <- dashboardBody(
   tabItems(
     tabItem(tabName = "dados_gerais",
             fluidRow(
-              infoBox("Valor transferido", paste("R$", valores$`Total de dinheiro repassado aos beneficiários`, sep = " "), icon = icon("donate"), width = 3, color = "olive"),
-              infoBox("Número de Potenciais Beneficiários", valores$`Número de potenciais beneficiários`, icon = icon("user-friends"), width = 3, color = "yellow"),
-              infoBox(HTML(paste("Percentual de pessoas extremamente",br(), "pobres atendidas")), paste(valores$`Percentual de pessoas extremamente pobres atendidas`, "%", sep = ""), icon = icon("chart-line"), width = 3, color = "purple"),
-              infoBox(HTML(paste("Percentual de pessoas",br(), "pobres atendidas")), paste(valores$`Percentual de pessoas pobres atendidas`, "%", sep = ""), icon = icon("chart-line"), width = 3, color = "navy")
+              infoBox("Valor transferido", paste("R$", valores$`Valor repassado aos beneficiários`, sep = " "), icon = icon("donate"), width = 3, color = "olive"),
+              infoBoxOutput("n_potenciais_beneficiarios", width = 3),
+              infoBoxOutput("perc_beneficiarios_ext_pobre", width = 3),
+              infoBoxOutput("perc_beneficiarios_pobre", width = 3)
             ),
-#            fluidRow(
-#              column(selectInput("publico", "Público de Análise:",
-#                                 c("Pessoa" = "pessoa",
-#                                   "Família" = "familia"),
-#                          selected = "pessoa"), offset = 4, width = 3, align = "center")),
+            fluidRow(
+              column(selectInput("publico", "Público de Análise:",
+                                 c("Pessoa" = "pessoa",
+                                   "Família" = "familia"),
+                          selected = "pessoa"), offset = 4, width = 3, align = "center")),
             fluidRow(
               column(plotlyOutput("mapa_ext_pobres"), width = 6),
               column(plotlyOutput("mapa_pobres"), width = 6)
@@ -131,15 +137,86 @@ ui <- dashboardPage(header,sidebar,body, skin = "black")
 
 # Define server logic ----
 server <- function(input, output) {
+
+  ##################################
+  #                                #
+  #           InfoBox              #
+  #                                #
+  ##################################
+  
+  # Total
+  output$n_potenciais_beneficiarios <- renderInfoBox({
+    if (input$publico == "pessoa") {
+      infoBox(
+        HTML(paste("Número de estudantes potencialmente",br(), "beneficiários")), 
+                   valores$`Número de estudantes potenciais beneficiários`, 
+                   icon = icon("user-friends"), color = "yellow") 
+    }
+    else {
+      infoBox(
+        HTML(paste("Número de famílias potencialmente",br(), "beneficiários")), 
+                   valores$`Número de famílias potenciais beneficiárias`, 
+                   icon = icon("user-friends"), color = "yellow")
+    }
+  })
+  
+  # Extremamente Pobre
+  output$perc_beneficiarios_ext_pobre <- renderInfoBox({
+    if (input$publico == "pessoa") {
+      infoBox(
+        HTML(paste("Percentual de estudantes extremamente",br(), "pobres atendidos")), 
+        paste(valores$`Percentual de pessoas extremamente pobres atendidas`, "%", sep = ""), 
+        icon = icon("chart-line"), color = "purple") 
+    }
+    else {
+      infoBox(
+        HTML(paste("Percentual de famílias extremamente",br(), "pobres atendidas")), 
+        paste(valores$`Percentual de famílias extremamente pobres atendidas`, "%", sep = ""), 
+        icon = icon("chart-line"), color = "purple")
+    }
+  })
+  
+  # Pobre  
+  output$perc_beneficiarios_pobre <- renderInfoBox({
+    if (input$publico == "pessoa") {
+      infoBox(
+        HTML(paste("Percentual de estudantes",br(), "pobres atendidos")), 
+        paste(valores$`Percentual de pessoas pobres atendidas`, "%", sep = ""), 
+        icon = icon("chart-line"), color = "purple")
+    }
+    else {
+      infoBox(
+        HTML(paste("Percentual de famílias",br(), "pobres atendidas")), 
+        paste(valores$`Percentual de famílias pobres atendidas`, "%", sep = ""), 
+        icon = icon("chart-line"), color = "purple")
+    }    
+  })
+
+  ##################################
+  #                                #
+  #   Mapa Extremamente pobres     #
+  #                                #
+  ##################################
   
   output$mapa_ext_pobres <- renderPlotly({
+    if (input$publico == "pessoa") {
+      regional_2 <- regional %>%
+        mutate(var_selecionada_ext_pobre = `Percentual de alunos extremamente pobres que receberam o benefício`)
+      titulo_ext_pobre = "\nPorcentagem de estudantes extremamente pobres atendidos - 16/11/2020"
+
+    }
+    else {
+      regional_2 <- regional %>%
+        mutate(var_selecionada_ext_pobre = `Percentual de famílias extremamente pobres que receberam o benefício`)
+      titulo_ext_pobre = "\nPorcentagem de famílias extremamente pobres atendidas - 16/11/2020"
+    }
     mapa_ext_pobres <- plot_ly()
     mapa_ext_pobres <- mapa_ext_pobres %>%
       add_trace(type = "scattergeo", 
                 mode = "text",
                 geojson=geojson,
-                locations=regional$Diretoria.Regional_2,
-                text = paste("<b>",regional$`Diretoria Regional`,"<b>", sep = ""),
+                locations=regional_2$Diretoria.Regional_2,
+                text = paste("<b>",regional_2$`Diretoria Regional`,"<b>", sep = ""),
                 locationmode = "geojson-id",
                 featureidkey="properties.Drtr_Rg",
                 textfont = list(size = 8, color = "black"),
@@ -149,12 +226,12 @@ server <- function(input, output) {
       add_trace(
         type="choropleth",
         geojson=geojson,
-        locations=regional$Diretoria.Regional_2,
-        z=regional$`Percentual de alunos extremamente pobres que receberam o benefício`,
+        locations=regional_2$Diretoria.Regional_2,
+        z=regional_2$var_selecionada_ext_pobre,
         colorscale= list(c(0, "rgb(255, 255, 255)"), c(1, "rgb(255,127,0)")),
         zmin = 0,
         zmax = 100,
-        text = regional$`Diretoria Regional`,
+        text = regional_2$`Diretoria Regional`,
         featureidkey="properties.Drtr_Rg",
         hovertemplate = paste("%{text}: %{z:.1f}%<extra></extra>"),
         marker = list(line = list(color = "#000"))
@@ -162,7 +239,7 @@ server <- function(input, output) {
     mapa_ext_pobres <- mapa_ext_pobres %>% colorbar(title = "<b>Porcentagem<br> </b>",
                                                     nticks = 10, ticklen = 10)
     mapa_ext_pobres <- mapa_ext_pobres %>% layout(
-      title = "\nPorcentagem de alunos extremamente pobres atendidos - 16/11/2020",
+      title = titulo_ext_pobre,
       geo = g,
       autosize = TRUE,
       margin = list(
@@ -175,14 +252,31 @@ server <- function(input, output) {
     )  
   })#
   
+  ##################################
+  #                                #
+  #         Mapa pobres            #
+  #                                #
+  ##################################
+  
   output$mapa_pobres <- renderPlotly({
+    
+    if (input$publico == "pessoa") {
+      regional_2 <- regional %>%
+        mutate(var_selecionada_pobre = `Percentual de alunos pobres que receberam o benefício`)
+      titulo_pobre = "\nPorcentagem de estudantes pobres atendidos - 16/11/2020"
+    }
+    else {
+      regional_2 <- regional %>%
+        mutate(var_selecionada_pobre = `Percentual de famílias pobres que receberam o benefício`)
+      titulo_pobre = "\nPorcentagem de famílias pobres atendidas - 16/11/2020"
+    }
     mapa_pobres <- plot_ly()
     mapa_pobres <- mapa_pobres %>%
       add_trace(type = "scattergeo", 
                 mode = "text",
                 geojson=geojson,
-                locations=regional$Diretoria.Regional_2,
-                text = paste("<b>",regional$`Diretoria Regional`,"<b>", sep = ""),
+                locations=regional_2$Diretoria.Regional_2,
+                text = paste("<b>",regional_2$`Diretoria Regional`,"<b>", sep = ""),
                 locationmode = "geojson-id",
                 featureidkey="properties.Drtr_Rg",
                 textfont = list(size = 8),
@@ -192,12 +286,12 @@ server <- function(input, output) {
       add_trace(
         type="choropleth",
         geojson=geojson,
-        locations=regional$Diretoria.Regional_2,
-        z=regional$`Percentual de alunos pobres que receberam o benefício`,
+        locations=regional_2$Diretoria.Regional_2,
+        z=regional_2$var_selecionada_pobre,
         colorscale= list(c(0, "rgb(255, 255, 255)"), c(1, "rgb(255,127,0)")), #rgb(153, 51, 153)
         zmin = 0,
         zmax = 100,
-        text = regional$`Diretoria Regional`,
+        text = regional_2$`Diretoria Regional`,
         featureidkey="properties.Drtr_Rg",
         hovertemplate = paste("%{text}: %{z:.1f}%<extra></extra>"),
         marker = list(line = list(color = "#000"))
@@ -205,7 +299,7 @@ server <- function(input, output) {
     mapa_pobres <- mapa_pobres %>% colorbar(title = "<b>Porcentagem<br> </b>",
                                             nticks = 10, ticklen = 10)
     mapa_pobres <- mapa_pobres %>% layout(
-      title = "\nPorcentagem de alunos pobres atendidas - 16/11/2020",
+      title = titulo_pobre,
       geo = g,
       autosize = TRUE,
       margin = list(
@@ -218,19 +312,47 @@ server <- function(input, output) {
     ) 
   })
   
+  ##################################
+  #                                #
+  #             Tabela             #
+  #                                #
+  ##################################
+  
   output$table_municipio <- DT::renderDataTable({
-    datatable(pagamentos_alunos_mun, 
-              rownames = FALSE,
-              options = list(scrollX = TRUE)
-    ) %>%
-      formatPercentage("Percentual de alunos extremamente pobres que receberam o benefício", 2) %>%
-      formatPercentage("Percentual de alunos pobres que receberam o benefício", 2) %>%
-      formatCurrency("Total de dinheiro repassado aos beneficiários", "R$ ", mark = ".", dec.mark = ",") %>%
-      formatRound("Número de alunos extremamente pobres potenciais beneficiários", mark = ".", digits = 0) %>%
-      formatRound("Número de alunos extremamente pobres que receberam o benefício", mark = ".", digits = 0) %>%
-      formatRound("Número de alunos pobres potenciais beneficiários", mark = ".", digits = 0) %>%
-      formatRound("Número de alunos pobres que receberam o benefício", mark = ".", digits = 0)
+    
+    if (input$publico == "pessoa") {
+      tabela <- pagamentos_alunos_mun %>%
+        select(1:9,16)
       
+      datatable(tabela, 
+                rownames = FALSE,
+                options = list(scrollX = TRUE)
+      ) %>%
+        formatPercentage("Percentual de alunos extremamente pobres que receberam o benefício", 2) %>%
+        formatPercentage("Percentual de alunos pobres que receberam o benefício", 2) %>%
+        formatCurrency("Valor repassado aos beneficiários", "R$ ", mark = ".", dec.mark = ",") %>%
+        formatRound("Número de alunos extremamente pobres potenciais beneficiários", mark = ".", digits = 0) %>%
+        formatRound("Número de alunos extremamente pobres que receberam o benefício", mark = ".", digits = 0) %>%
+        formatRound("Número de alunos pobres potenciais beneficiários", mark = ".", digits = 0) %>%
+        formatRound("Número de alunos pobres que receberam o benefício", mark = ".", digits = 0)
+    }
+    else {
+        tabela <- pagamentos_alunos_mun %>%
+          select(1:3,10:16)
+  
+        datatable(tabela, 
+                  rownames = FALSE,
+                  options = list(scrollX = TRUE)
+        ) %>%
+          formatPercentage("Percentual de famílias extremamente pobres que receberam o benefício", 2) %>%
+          formatPercentage("Percentual de famílias pobres que receberam o benefício", 2) %>%
+          formatCurrency("Valor repassado aos beneficiários", "R$ ", mark = ".", dec.mark = ",") %>%
+          formatRound("Número de famílias extremamente pobres potenciais beneficiárias", mark = ".", digits = 0) %>%
+          formatRound("Número de famílias extremamente pobres que receberam o benefício", mark = ".", digits = 0) %>%
+          formatRound("Número de famílias pobres potenciais beneficiárias", mark = ".", digits = 0) %>%
+          formatRound("Número de famílias pobres que receberam o benefício", mark = ".", digits = 0)
+        
+    }
   })
 }
 
